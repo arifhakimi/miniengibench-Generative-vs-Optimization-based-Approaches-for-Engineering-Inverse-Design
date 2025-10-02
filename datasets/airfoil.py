@@ -9,12 +9,13 @@ from sklearn.preprocessing import StandardScaler
 URL = "https://archive.ics.uci.edu/ml/machine-learning-databases/00291/airfoil_self_noise.dat"
 COLUMNS = ["Frequency", "Angle", "Chord", "Velocity", "Thickness", "SPL"]
 
-def load_airfoil(test_size=0.2, val_size=0.1, random_state=42, local_path: str | None = None):
+def load_airfoil(test_size=0.2, val_size=0.1, random_state=42, local_path: str | None = None, return_metadata: bool = False):
     """
     Loads the Airfoil Self-Noise dataset and returns standardized train/val/test splits.
 
     Returns:
-        X_train, y_train, X_val, y_val, X_test, y_test (all numpy arrays)
+        X_train, y_train, X_val, y_val, X_test, y_test (all numpy arrays).
+        When return_metadata is True, an additional metadata dictionary is appended.
 
     Notes (Reasoning):
     - Standardized splits ensure fair model comparison.
@@ -37,9 +38,22 @@ def load_airfoil(test_size=0.2, val_size=0.1, random_state=42, local_path: str |
         X_temp, y_temp, test_size=1 - rel, random_state=random_state
     )
 
-    scaler = StandardScaler().fit(X_train)
-    X_train = scaler.transform(X_train)
-    X_val = scaler.transform(X_val)
-    X_test = scaler.transform(X_test)
+    X_train_raw = X_train.copy()
+    X_val_raw = X_val.copy()
+    X_test_raw = X_test.copy()
+
+    scaler = StandardScaler().fit(X_train_raw)
+    X_train = scaler.transform(X_train_raw)
+    X_val = scaler.transform(X_val_raw)
+    X_test = scaler.transform(X_test_raw)
+
+    if return_metadata:
+        metadata = {
+            "scaler": scaler,
+            "feature_names": COLUMNS[:-1],
+            "train_min": X_train_raw.min(axis=0),
+            "train_max": X_train_raw.max(axis=0),
+        }
+        return X_train, y_train, X_val, y_val, X_test, y_test, metadata
 
     return X_train, y_train, X_val, y_val, X_test, y_test

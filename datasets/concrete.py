@@ -14,10 +14,14 @@ COLS = [
     "Superplasticizer", "CoarseAggregate", "FineAggregate", "Age", "Strength"
 ]
 
-def load_concrete(test_size=0.2, val_size=0.1, random_state=42, local_path: str | None = None):
+def load_concrete(test_size=0.2, val_size=0.1, random_state=42, local_path: str | None = None, return_metadata: bool = False):
     """
     Loads the Concrete Compressive Strength dataset and returns standardized splits.
-    Target: Strength (MPa)
+    Target: Strength (MPa).
+
+    Returns:
+        X_train, y_train, X_val, y_val, X_test, y_test (numpy arrays).
+        When return_metadata is True, an additional metadata dictionary is appended.
     """
     if local_path and Path(local_path).exists():
         df = pd.read_excel(local_path, header=0)
@@ -36,9 +40,22 @@ def load_concrete(test_size=0.2, val_size=0.1, random_state=42, local_path: str 
         X_temp, y_temp, test_size=1 - rel, random_state=random_state
     )
 
-    scaler = StandardScaler().fit(X_train)
-    X_train = scaler.transform(X_train)
-    X_val = scaler.transform(X_val)
-    X_test = scaler.transform(X_test)
+    X_train_raw = X_train.copy()
+    X_val_raw = X_val.copy()
+    X_test_raw = X_test.copy()
+
+    scaler = StandardScaler().fit(X_train_raw)
+    X_train = scaler.transform(X_train_raw)
+    X_val = scaler.transform(X_val_raw)
+    X_test = scaler.transform(X_test_raw)
+
+    if return_metadata:
+        metadata = {
+            "scaler": scaler,
+            "feature_names": COLS[:-1],
+            "train_min": X_train_raw.min(axis=0),
+            "train_max": X_train_raw.max(axis=0),
+        }
+        return X_train, y_train, X_val, y_val, X_test, y_test, metadata
 
     return X_train, y_train, X_val, y_val, X_test, y_test
