@@ -130,3 +130,4 @@ When I write things up, I usually cover: brief motivation, dataset summaries, mo
 
 That's the whole setup.
 # miniengibench-benhmark-of-surrogates-model-inverse-design
+# miniengibench-Generative-vs-Optimization-based-Approaches-for-Engineering-Inverse-Design
