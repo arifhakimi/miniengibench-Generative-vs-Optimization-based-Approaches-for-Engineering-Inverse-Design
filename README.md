@@ -15,6 +15,8 @@ None of the datasets require deep physics knowledge, just solid ML hygiene.
   - **Concrete Compressive Strength**: predict strength from mix proportions.
 - Standardised train/val/test splits with RMSE, MAE, R^2, and timing metrics.
 - JSON logs plus plotting helpers for quick comparisons.
+- A conditional-VAE generative design benchmark (`benchmarks/run_generative_design.py`) that
+  logs validity, diversity, and surrogate-comparison diagnostics.
 - An inverse-design loop (`inverse_design.py`) that lets me test surrogate-driven optimisation under different data budgets.
 
 ## Environment setup (tested on Apple Silicon)
@@ -53,6 +55,7 @@ Keeping loaders, models, and experiment scripts in separate folders makes it pai
 - **Concrete Compressive Strength (UCI)**: civil engineering flavour with different target behaviour.
 
 Both are public, tidy, and easy to standardise, so I can focus on the benchmarking side.
+Each loader also accepts `return_metadata=True` to expose the scaler and feature bounds needed for generative validity checks.
 
 ## How I run things
 1. Run the airfoil benchmark:
@@ -102,13 +105,32 @@ python -m benchmarks.plot_inverse_design --task concrete --quantity regret
 ```
    Saved figures follow `results/<task>_inverse_design_<quantity>.png`.
 
+6. Sample designs with the conditional VAE benchmark:
+```bash
+python -m benchmarks.run_generative_design --task airfoil --num-samples 256 --eval-surrogate
+python -m benchmarks.run_generative_design --task concrete --num-samples 256 --eval-surrogate
+```
+   The script saves `results/<task>_generative_cvae.json` with full training config, validity/diversity stats,
+   surrogate score summaries, and (when `--eval-surrogate` is used) a histogram under
+   `results/<task>_generative_performance_hist.png`.
+
 ## How I read the results
 - MAE / RMSE: lower is better.
 - R^2: closer to 1 means more variance explained.
 - Train / inference timing: I keep an eye on these when thinking about optimisation loops.
 
+## Generative design outputs
+Each CVAE run writes `results/<task>_generative_cvae.json` with:
+- `validity`: counts of valid/invalid samples plus per-feature constraint violations.
+- `valid_design_indices`: zero-based indices for the samples that stayed within the scaled training envelope.
+- `diversity`: average pairwise distance among valid unscaled designs when metadata is available.
+- `performance`: surrogate statistics on the valid set and the histogram path (if `--eval-surrogate`).
+- `paper1_comparison`: best inverse-design baseline recovered from `results/<task>_inverse_design.json` to compare against.
+
+When the surrogate is evaluated, the script also saves `results/<task>_generative_performance_hist.png` to visualise the score distribution.
+
 ## Extending the benchmark
-- New dataset: drop a loader in `datasets/` with a `load_<name>()` helper that returns train/val/test splits plus scalers.
+- New dataset: drop a loader in `datasets/` with a `load_<name>()` helper that returns train/val/test splits and, when `return_metadata=True`, the fitted scaler plus min/max ranges for generative validity checks.
 - New model: add a wrapper in `models/` exposing `fit` and `predict`, just like the existing ones.
 - New task: create `benchmarks/run_<name>.py` that wires loaders and models together and dumps JSON the same way.
 
